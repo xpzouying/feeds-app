@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"net/http"
 	"os"
 
@@ -12,6 +13,13 @@ import (
 )
 
 func main() {
+	var (
+		httpAddr string
+	)
+	{
+		flag.StringVar(&httpAddr, "http.addr", ":8080", "http address for server")
+	}
+	flag.Parse()
 
 	var logger log.Logger
 	{
@@ -34,6 +42,6 @@ func main() {
 
 	mux.Handle("/metrics", promhttp.Handler())
 
-	logger.Log("http.addr", ":8080")
-	logger.Log("finish", http.ListenAndServe(":8080", mux))
+	logger.Log("http.addr", httpAddr)
+	logger.Log("finish", http.ListenAndServe(httpAddr, mux))
 }
