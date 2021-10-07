@@ -43,7 +43,13 @@ func main() {
 				Namespace: "api",
 				Subsystem: "feeding_service",
 				Name:      "request_count",
-				Help:      "Count of request for feeding_service",
+				Help:      "Count of request",
+			}, labelNames),
+			kitprometheus.NewHistogramFrom(stdprometheus.HistogramOpts{
+				Namespace: "api",
+				Subsystem: "feeding_service",
+				Name:      "request_latency",
+				Help:      "Latency of request",
 			}, labelNames),
 		)(fs)
 	}

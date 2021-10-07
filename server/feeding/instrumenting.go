@@ -10,21 +10,20 @@ import (
 
 type instrumentingMiddleware struct {
 	reqCounter metrics.Counter
+	reqLatency metrics.Histogram
 	next       Service
 }
 
-func InstrumentMiddleware(counter metrics.Counter) Middleware {
+func InstrumentMiddleware(counter metrics.Counter, latency metrics.Histogram) Middleware {
 	return func(next Service) Service {
-		return &instrumentingMiddleware{
-			reqCounter: counter,
-			next:       next,
-		}
+		return &instrumentingMiddleware{counter, latency, next}
 	}
 }
 
 func (im instrumentingMiddleware) ListFeeds(page, count int) (feeds []feed.Feed) {
 	defer func(begin time.Time) {
 		im.reqCounter.With("method", "list_feeds").Add(1)
+		im.reqLatency.With("method", "list_feeds").Observe(float64(time.Since(begin).Milliseconds()))
 	}(time.Now())
 
 	feeds = im.next.ListFeeds(page, count)
