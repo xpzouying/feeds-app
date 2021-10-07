@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/go-kit/log"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/xpzouying/feeds-app/server/feeding"
 	"github.com/xpzouying/feeds-app/server/repository"
@@ -30,6 +31,8 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("/feeding/", feeding.MakeHandler(fs))
+
+	mux.Handle("/metrics", promhttp.Handler())
 
 	logger.Log("http.addr", ":8080")
 	logger.Log("finish", http.ListenAndServe(":8080", mux))
