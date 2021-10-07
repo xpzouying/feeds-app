@@ -25,6 +25,7 @@ func main() {
 	var fs feeding.Service
 	{
 		fs = feeding.NewService(feedRepo)
+		fs = feeding.LoggingMiddleware(log.With(logger, "component", "feeding"))(fs)
 	}
 
 	mux := http.NewServeMux()

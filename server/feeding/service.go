@@ -2,6 +2,8 @@ package feeding
 
 import "github.com/xpzouying/feeds-app/server/feed"
 
+type Middleware func(Service) Service
+
 type Service interface {
 	ListFeeds(page, count int) []feed.Feed
 }
