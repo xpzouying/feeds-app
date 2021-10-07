@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"os"
 
+	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
 	"github.com/go-kit/log"
+	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/xpzouying/feeds-app/server/feeding"
@@ -31,10 +33,19 @@ func main() {
 		feedRepo = repository.NewFeedRepository()
 	)
 
+	labelNames := []string{"method"}
 	var fs feeding.Service
 	{
 		fs = feeding.NewService(feedRepo)
 		fs = feeding.LoggingMiddleware(log.With(logger, "component", "feeding"))(fs)
+		fs = feeding.InstrumentMiddleware(
+			kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
+				Namespace: "api",
+				Subsystem: "feeding_service",
+				Name:      "request_count",
+				Help:      "Count of request for feeding_service",
+			}, labelNames),
+		)(fs)
 	}
 
 	mux := http.NewServeMux()
