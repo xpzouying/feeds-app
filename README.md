@@ -42,7 +42,9 @@ feeds app demo.
 
 ```bash
 # 运行服务
-go run server/cmd/main.go
+
+# Use zipkin for Tracing
+go run server/cmd/main.go -zipkin.addr="http://localhost:9411/api/v2/spans"
 
 # 请求
 curl -XPOST -d '{"page": 0, "count": 10}' http://localhost:8080/feeding/feeds
