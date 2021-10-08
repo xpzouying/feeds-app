@@ -15,6 +15,26 @@ feeds app demo.
 
     - `prometheus` - metrics统计。
 
+    - `OpenTracing`
+    
+        安装
+        
+        ```bash
+        docker run -d -p 5775:5775/udp -p 16686:16686 jaegertracing/all-in-one:latest
+
+        # open URL of jaeger UI
+        # http://docker.zy.local:16686/
+        ```
+
+    - `zipkin` - https://github.com/openzipkin/zipkin
+
+        安装
+
+        ```bash
+        docker run -d -p 9411:9411 openzipkin/zipkin
+
+        # http://docker.zy.local:9411/zipkin/
+        ```
 
 ## 运行
 
@@ -36,3 +56,6 @@ http://localhost:8080/metrics
 ### 关于基础设施
 
 - [Prometheus Guide - Go Application](https://prometheus.io/docs/guides/go-application/)
+
+- [OpenTracing常用Tags/Logs字段](https://github.com/opentracing/specification/blob/master/semantic_conventions.md)
+

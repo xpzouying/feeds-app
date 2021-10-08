@@ -5,16 +5,17 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/go-kit/kit/endpoint"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 
 	"github.com/xpzouying/feeds-app/server/feed"
 )
 
-func MakeHandler(svc Service) http.Handler {
+func MakeHandler(endpoint endpoint.Endpoint) http.Handler {
 
 	listFeedsHandler := kithttp.NewServer(
-		makeListFeedsEndpoint(svc),
+		endpoint,
 		decodeListFeedsRequest,
 		encodeResponse,
 	)
