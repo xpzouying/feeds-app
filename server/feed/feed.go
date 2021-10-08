@@ -1,9 +1,9 @@
 package feed
 
 type Feed struct {
-	ID       int
-	AutherID int
-	Text     string
+	ID       int    `json:"id"`
+	AuthorID int    `json:"author_id"`
+	Text     string `json:"text"`
 }
 
 type Repository interface {

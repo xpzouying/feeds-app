@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/go-kit/kit/endpoint"
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
 	"github.com/go-kit/kit/tracing/opentracing"
 	"github.com/go-kit/log"
@@ -49,11 +50,9 @@ func main() {
 		fs feeding.Service = newFeedingService(logger, feedRepo)
 	)
 
-	var (
-		endpoint = feeding.MakeListFeedsEndpoint(fs)
-	)
-
+	var endpoint endpoint.Endpoint
 	{
+		endpoint = feeding.MakeListFeedsEndpoint(fs)
 		endpoint = opentracing.TraceServer(tracer, "FeedingService")(endpoint)
 	}
 

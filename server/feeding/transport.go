@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/go-kit/kit/endpoint"
 	kithttp "github.com/go-kit/kit/transport/http"
@@ -21,15 +22,26 @@ func MakeHandler(endpoint endpoint.Endpoint) http.Handler {
 	)
 
 	r := mux.NewRouter()
-	r.Methods(http.MethodPost).Path("/feeding/feeds").Handler(listFeedsHandler)
+	r.Methods(http.MethodGet).Path("/feeding/feeds").Handler(listFeedsHandler)
 
 	return r
 }
 
-func decodeListFeedsRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	var request listFeedsRequest
-	err := json.NewDecoder(r.Body).Decode(&request)
-	return request, err
+func decodeListFeedsRequest(ctx context.Context, r *http.Request) (request interface{}, err error) {
+	var (
+		page, _  = strconv.Atoi(r.FormValue("page"))
+		count, _ = strconv.Atoi(r.FormValue("count"))
+	)
+
+	if count == 0 {
+		count = 10
+	}
+
+	request = listFeedsRequest{
+		Page:  page,
+		Count: count,
+	}
+	return
 }
 
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
@@ -40,6 +52,7 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, response interfa
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	return json.NewEncoder(w).Encode(response)
 }
 
