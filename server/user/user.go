@@ -9,7 +9,7 @@ type User struct {
 
 type Repository interface {
 	// Get a user by uid.
-	Get(uid int) error
+	Get(uid int) (User, error)
 
 	// Create a user, and return this user model.
 	Create(name, avatar string) (User, error)

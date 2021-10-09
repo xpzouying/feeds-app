@@ -6,23 +6,27 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/go-kit/kit/endpoint"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 
 	"github.com/xpzouying/feeds-app/server/feed"
 )
 
-func MakeHandler(endpoint endpoint.Endpoint) http.Handler {
-
-	listFeedsHandler := kithttp.NewServer(
-		endpoint,
-		decodeListFeedsRequest,
-		encodeResponse,
-	)
+func MakeHandler(set EndpointSet) http.Handler {
 
 	r := mux.NewRouter()
-	r.Methods(http.MethodGet).Path("/feeding/feeds").Handler(listFeedsHandler)
+
+	r.Methods(http.MethodGet).Path("/feeding/feeds").Handler(kithttp.NewServer(
+		set.ListFeeds,
+		decodeListFeedsRequest,
+		encodeResponse,
+	))
+
+	r.Methods(http.MethodPost).Path("/feeding/feeds").Handler(kithttp.NewServer(
+		set.PostFeed,
+		decodePostFeedRequest,
+		encodeResponse,
+	))
 
 	return r
 }
@@ -40,6 +44,19 @@ func decodeListFeedsRequest(ctx context.Context, r *http.Request) (request inter
 	request = listFeedsRequest{
 		Page:  page,
 		Count: count,
+	}
+	return
+}
+
+func decodePostFeedRequest(ctx context.Context, r *http.Request) (request interface{}, err error) {
+	var (
+		uid, _ = strconv.Atoi(r.FormValue("uid"))
+		text   = r.FormValue("text")
+	)
+
+	request = postFeedRequest{
+		Uid:  uid,
+		Text: text,
 	}
 	return
 }
@@ -68,4 +85,14 @@ type listFeedsRequest struct {
 type listFeedsResponse struct {
 	Feeds []feed.Feed `json:"feeds"`
 	Err   error       `json:"error,omitempty"`
+}
+
+type postFeedRequest struct {
+	Uid  int    `json:"uid"`
+	Text string `json:"text"`
+}
+
+type postFeedResponse struct {
+	Feed feed.Feed `json:"feed"`
+	Err  error     `json:"err,omitempty"`
 }

@@ -1,6 +1,13 @@
 package user
 
 var (
+	SampleUsers = map[int]User{
+		User1.Uid: User1,
+		User2.Uid: User2,
+	}
+)
+
+var (
 	User1 = User{
 		Uid:    1,
 		Name:   "zouying",

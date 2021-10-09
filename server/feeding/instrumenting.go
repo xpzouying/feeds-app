@@ -29,3 +29,12 @@ func (im instrumentingMiddleware) ListFeeds(page, count int) (feeds []feed.Feed)
 	feeds = im.next.ListFeeds(page, count)
 	return
 }
+
+func (im instrumentingMiddleware) PostFeed(uid int, text string) (feed.Feed, error) {
+	defer func(begin time.Time) {
+		im.reqCounter.With("method", "post_feed").Add(1)
+		im.reqLatency.With("method", "post_feed").Observe(float64(time.Since(begin).Milliseconds()))
+	}(time.Now())
+
+	return im.next.PostFeed(uid, text)
+}

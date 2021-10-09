@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/go-kit/kit/endpoint"
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
 	"github.com/go-kit/kit/tracing/opentracing"
 	"github.com/go-kit/log"
@@ -19,6 +18,7 @@ import (
 	"github.com/xpzouying/feeds-app/server/feed"
 	"github.com/xpzouying/feeds-app/server/feeding"
 	"github.com/xpzouying/feeds-app/server/repository"
+	"github.com/xpzouying/feeds-app/server/user"
 )
 
 func main() {
@@ -40,6 +40,7 @@ func main() {
 
 	var (
 		feedRepo = repository.NewFeedRepository()
+		userRepo = repository.NewUserRepository()
 	)
 
 	var (
@@ -47,17 +48,20 @@ func main() {
 	)
 
 	var (
-		fs feeding.Service = newFeedingService(logger, feedRepo)
+		fs feeding.Service = newFeedingService(logger, feedRepo, userRepo)
 	)
 
-	var endpoint endpoint.Endpoint
+	var feedingEndpoints feeding.EndpointSet
 	{
-		endpoint = feeding.MakeListFeedsEndpoint(fs)
-		endpoint = opentracing.TraceServer(tracer, "FeedingService")(endpoint)
+		feedingEndpoints.ListFeeds = feeding.MakeListFeedsEndpoint(fs)
+		feedingEndpoints.ListFeeds = opentracing.TraceServer(tracer, "FeedingService.ListFeeds")(feedingEndpoints.ListFeeds)
+
+		feedingEndpoints.PostFeed = feeding.MakePostFeedEndpoint(fs)
+		feedingEndpoints.PostFeed = opentracing.TraceServer(tracer, "FeedingService.PostFeed")(feedingEndpoints.PostFeed)
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/feeding/", feeding.MakeHandler(endpoint))
+	mux.Handle("/feeding/", feeding.MakeHandler(feedingEndpoints))
 
 	mux.Handle("/metrics", promhttp.Handler())
 
@@ -86,10 +90,10 @@ func newOpenTracer(zipkinAddr string) (openTracer stdopentracing.Tracer) {
 	return
 }
 
-func newFeedingService(logger log.Logger, feedRepo feed.Repository) (fs feeding.Service) {
+func newFeedingService(logger log.Logger, feedRepo feed.Repository, userRepo user.Repository) (fs feeding.Service) {
 	labelNames := []string{"method"}
 
-	fs = feeding.NewService(feedRepo)
+	fs = feeding.NewService(feedRepo, userRepo)
 
 	fs = feeding.LoggingMiddleware(log.With(logger, "component", "feeding"))(fs)
 	fs = feeding.InstrumentMiddleware(

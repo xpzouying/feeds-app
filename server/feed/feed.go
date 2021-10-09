@@ -8,4 +8,6 @@ type Feed struct {
 
 type Repository interface {
 	ListFeeds(page, count int) ([]Feed, error)
+
+	PostFeed(uid int, text string) (Feed, error)
 }
