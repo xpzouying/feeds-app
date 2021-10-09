@@ -4,8 +4,10 @@ import (
 	"flag"
 	"net/http"
 	"os"
+	"time"
 
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
+	"github.com/go-kit/kit/ratelimit"
 	"github.com/go-kit/kit/tracing/opentracing"
 	"github.com/go-kit/log"
 	stdopentracing "github.com/opentracing/opentracing-go"
@@ -14,6 +16,7 @@ import (
 	httpreporter "github.com/openzipkin/zipkin-go/reporter/http"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"golang.org/x/time/rate"
 
 	"github.com/xpzouying/feeds-app/server/feed"
 	"github.com/xpzouying/feeds-app/server/feeding"
@@ -48,16 +51,19 @@ func main() {
 	)
 
 	var (
-		fs feeding.Service = newFeedingService(logger, feedRepo, userRepo)
+		fs feeding.Service = makeFeedingService(logger, feedRepo, userRepo)
 	)
 
 	var feedingEndpoints feeding.EndpointSet
 	{
-		feedingEndpoints.ListFeeds = feeding.MakeListFeedsEndpoint(fs)
-		feedingEndpoints.ListFeeds = opentracing.TraceServer(tracer, "FeedingService.ListFeeds")(feedingEndpoints.ListFeeds)
+		listFeedEndpoint := feeding.MakeListFeedsEndpoint(fs)
+		listFeedEndpoint = ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 10))(listFeedEndpoint)
+		listFeedEndpoint = opentracing.TraceServer(tracer, "FeedingService.ListFeeds")(listFeedEndpoint)
+		feedingEndpoints.ListFeeds = listFeedEndpoint
 
-		feedingEndpoints.PostFeed = feeding.MakePostFeedEndpoint(fs)
-		feedingEndpoints.PostFeed = opentracing.TraceServer(tracer, "FeedingService.PostFeed")(feedingEndpoints.PostFeed)
+		postFeedEndpoint := feeding.MakePostFeedEndpoint(fs)
+		postFeedEndpoint = opentracing.TraceServer(tracer, "FeedingService.PostFeed")(postFeedEndpoint)
+		feedingEndpoints.PostFeed = postFeedEndpoint
 	}
 
 	mux := http.NewServeMux()
@@ -90,7 +96,7 @@ func newOpenTracer(zipkinAddr string) (openTracer stdopentracing.Tracer) {
 	return
 }
 
-func newFeedingService(logger log.Logger, feedRepo feed.Repository, userRepo user.Repository) (fs feeding.Service) {
+func makeFeedingService(logger log.Logger, feedRepo feed.Repository, userRepo user.Repository) (fs feeding.Service) {
 	labelNames := []string{"method"}
 
 	fs = feeding.NewService(feedRepo, userRepo)
