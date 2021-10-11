@@ -52,15 +52,15 @@ func (r *feedRepository) ListFeeds(page, count int) ([]feed.Feed, error) {
 }
 
 func (r *feedRepository) PostFeed(uid int, text string) (feed.Feed, error) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
 	newFeed := feed.Feed{
 		ID:       r.getNewFeedID(),
 		AuthorID: uid,
 		Text:     text,
 	}
+
+	r.lock.Lock()
 	r.feeds = append(r.feeds, newFeed)
+	r.lock.Unlock()
 	return newFeed, nil
 }
 
@@ -111,23 +111,22 @@ func (r *userRepository) Get(uid int) (user.User, error) {
 
 // Create a user, and return this user model.
 func (r *userRepository) Create(name, avatar string) (user.User, error) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
 	newUser := user.User{
 		Uid:    r.getNewUserID(),
 		Name:   name,
 		Avatar: avatar,
 	}
 
+	r.lock.Lock()
 	r.users[newUser.Uid] = newUser
+	r.lock.Unlock()
 
 	return newUser, nil
 }
 
 func (r *userRepository) getNewUserID() (uid int) {
 	r.lock.Lock()
-	r.lock.Unlock()
+	defer r.lock.Unlock()
 
 	uid = r.lastUid + 1
 	r.lastUid++

@@ -29,12 +29,6 @@ var SampleFeeds []Feed = []Feed{
 	{
 		ID:       5,
 		AuthorID: 1,
-		Text:     "If opportunity doesn’t knock, build a door.",
-	},
-
-	{
-		ID:       6,
-		AuthorID: 1,
 		Text:     "Laugh as much as you breathe and love as long as you live.",
 	},
 }
