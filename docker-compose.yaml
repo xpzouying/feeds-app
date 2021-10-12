@@ -1,0 +1,13 @@
+version: "3"
+
+services:
+  feed-server:
+    image: xpzouying/feeds-server
+    build:
+      context: .
+      dockerfile: Dockerfile-feeds-server
+    ports:
+      - "8080:8080"
+    entrypoint:
+      - /feeds-server
+      - zipkin.addr="http://docker.zy.local:9411/api/v2/spans"
