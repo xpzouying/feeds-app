@@ -4,8 +4,6 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/metrics"
-
-	"github.com/xpzouying/feeds-app/server/feed"
 )
 
 type instrumentingMiddleware struct {
@@ -20,7 +18,7 @@ func InstrumentMiddleware(counter metrics.Counter, latency metrics.Histogram) Mi
 	}
 }
 
-func (im instrumentingMiddleware) ListFeeds(page, count int) (feeds []feed.Feed) {
+func (im instrumentingMiddleware) ListFeeds(page, count int) (feeds []Feed) {
 	defer func(begin time.Time) {
 		im.reqCounter.With("method", "list_feeds").Add(1)
 		im.reqLatency.With("method", "list_feeds").Observe(float64(time.Since(begin).Milliseconds()))
@@ -30,7 +28,7 @@ func (im instrumentingMiddleware) ListFeeds(page, count int) (feeds []feed.Feed)
 	return
 }
 
-func (im instrumentingMiddleware) PostFeed(uid int, text string) (feed.Feed, error) {
+func (im instrumentingMiddleware) PostFeed(uid int, text string) (Feed, error) {
 	defer func(begin time.Time) {
 		im.reqCounter.With("method", "post_feed").Add(1)
 		im.reqLatency.With("method", "post_feed").Observe(float64(time.Since(begin).Milliseconds()))

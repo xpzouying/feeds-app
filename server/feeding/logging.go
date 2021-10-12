@@ -4,8 +4,6 @@ import (
 	"time"
 
 	"github.com/go-kit/log"
-
-	"github.com/xpzouying/feeds-app/server/feed"
 )
 
 type loggingMiddleware struct {
@@ -20,7 +18,7 @@ func LoggingMiddleware(logger log.Logger) Middleware {
 	}
 }
 
-func (lm loggingMiddleware) ListFeeds(page, count int) (feeds []feed.Feed) {
+func (lm loggingMiddleware) ListFeeds(page, count int) (feeds []Feed) {
 	defer func(begin time.Time) {
 		lm.logger.Log(
 			"method", "list_feeds",
@@ -35,7 +33,7 @@ func (lm loggingMiddleware) ListFeeds(page, count int) (feeds []feed.Feed) {
 	return
 }
 
-func (lm loggingMiddleware) PostFeed(uid int, text string) (feed.Feed, error) {
+func (lm loggingMiddleware) PostFeed(uid int, text string) (Feed, error) {
 	defer func(begin time.Time) {
 		lm.logger.Log(
 			"method", "post_feed",

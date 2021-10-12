@@ -8,8 +8,6 @@ import (
 
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
-
-	"github.com/xpzouying/feeds-app/server/feed"
 )
 
 func MakeHandler(set EndpointSet) http.Handler {
@@ -83,8 +81,8 @@ type listFeedsRequest struct {
 }
 
 type listFeedsResponse struct {
-	Feeds []feed.Feed `json:"feeds"`
-	Err   error       `json:"error,omitempty"`
+	Feeds []Feed `json:"feeds"`
+	Err   error  `json:"error,omitempty"`
 }
 
 type postFeedRequest struct {
@@ -93,6 +91,6 @@ type postFeedRequest struct {
 }
 
 type postFeedResponse struct {
-	Feed feed.Feed `json:"feed"`
-	Err  error     `json:"err,omitempty"`
+	Feed Feed  `json:"feed"`
+	Err  error `json:"err,omitempty"`
 }
