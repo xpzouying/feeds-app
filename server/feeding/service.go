@@ -8,9 +8,16 @@ import (
 type Middleware func(Service) Service
 
 type Service interface {
-	ListFeeds(page, count int) []feed.Feed
+	ListFeeds(page, count int) []Feed
 
-	PostFeed(uid int, text string) (feed.Feed, error)
+	PostFeed(uid int, text string) (Feed, error)
+}
+
+type Feed struct {
+	feed.Feed
+
+	AuthorName   string `json:"author_name"`
+	AuthorAvatar string `json:"author_avatar"`
 }
 
 type service struct {
@@ -22,19 +29,44 @@ func NewService(feedRepo feed.Repository, userRepo user.Repository) Service {
 	return &service{feedRepo, userRepo}
 }
 
-func (s *service) ListFeeds(page, count int) []feed.Feed {
-	feeds, err := s.feedRepo.ListFeeds(page, count)
+func (s *service) ListFeeds(page, count int) []Feed {
+
+	feedsList, err := s.feedRepo.ListFeeds(page, count)
 	if err != nil {
-		return []feed.Feed{}
+		return []Feed{}
 	}
+
+	feeds := make([]Feed, 0, len(feedsList))
+	for _, f := range feedsList {
+		author, err := s.userRepo.Get(f.AuthorID)
+		if err != nil {
+			continue
+		}
+
+		feeds = append(feeds, Feed{
+			Feed:         f,
+			AuthorName:   author.Name,
+			AuthorAvatar: author.Avatar,
+		})
+	}
+
 	return feeds
 }
 
-func (s *service) PostFeed(uid int, text string) (feed.Feed, error) {
-	_, err := s.userRepo.Get(uid)
+func (s *service) PostFeed(uid int, text string) (Feed, error) {
+	author, err := s.userRepo.Get(uid)
 	if err != nil {
-		return feed.Feed{}, err
+		return Feed{}, err
 	}
 
-	return s.feedRepo.PostFeed(uid, text)
+	newFeed, err := s.feedRepo.PostFeed(uid, text)
+	if err != nil {
+		return Feed{}, err
+	}
+
+	return Feed{
+		Feed:         newFeed,
+		AuthorName:   author.Name,
+		AuthorAvatar: author.Avatar,
+	}, nil
 }
