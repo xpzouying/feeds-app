@@ -3,9 +3,10 @@ WORKDIR /go/src/app
 COPY ./server/ ./server/
 COPY go.mod .
 COPY go.sum .
-RUN CGO_ENABLED=0 go build -o /app/feeds-server ./server/cmd/main.go
+RUN CGO_ENABLED=0 go build -o /build/feeds-server ./server/cmd/main.go
 
 
 FROM alpine:latest
-COPY --from=builder /app/feeds-server /feeds-server
+COPY --from=builder /build/feeds-server /feeds-server
+EXPOSE 8080
 LABEL Name=feeds-server Version=0.0.1
