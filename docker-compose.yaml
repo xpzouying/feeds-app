@@ -4,8 +4,8 @@ services:
   feed-server:
     image: xpzouying/feeds-server
     build:
-      context: .
-      dockerfile: Dockerfile-feeds-server
+      context: ./server
+      dockerfile: Dockerfile
     ports:
       - "8080:8080"
     entrypoint:
