@@ -9,4 +9,4 @@ RUN CGO_ENABLED=0 go build -o /build/feeds-server ./server/cmd/main.go
 FROM alpine:latest
 COPY --from=builder /build/feeds-server /feeds-server
 EXPOSE 8080
-LABEL Name=feeds-server Version=0.0.1
+LABEL Name=feeds-server Version=0.0.2
