@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-kit/kit/circuitbreaker"
+	"github.com/go-kit/kit/endpoint"
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
 	"github.com/go-kit/kit/ratelimit"
 	"github.com/go-kit/kit/tracing/opentracing"
@@ -16,6 +18,7 @@ import (
 	httpreporter "github.com/openzipkin/zipkin-go/reporter/http"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sony/gobreaker"
 	"golang.org/x/time/rate"
 
 	"github.com/xpzouying/feeds-app/server/feed"
@@ -57,11 +60,12 @@ func main() {
 	var feedingEndpoints feeding.EndpointSet
 	{
 		listFeedEndpoint := feeding.MakeListFeedsEndpoint(fs)
-		listFeedEndpoint = ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 10))(listFeedEndpoint)
+		listFeedEndpoint = ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 1))(listFeedEndpoint)
 		listFeedEndpoint = opentracing.TraceServer(tracer, "FeedingService.ListFeeds")(listFeedEndpoint)
 		feedingEndpoints.ListFeeds = listFeedEndpoint
 
 		postFeedEndpoint := feeding.MakePostFeedEndpoint(fs)
+		postFeedEndpoint = wrapGoBreaker(postFeedEndpoint, "FeedingService.PostFeed.Breader")
 		postFeedEndpoint = opentracing.TraceServer(tracer, "FeedingService.PostFeed")(postFeedEndpoint)
 		feedingEndpoints.PostFeed = postFeedEndpoint
 	}
@@ -118,4 +122,13 @@ func makeFeedingService(logger log.Logger, feedRepo feed.Repository, userRepo us
 	)(fs)
 
 	return
+}
+
+func wrapGoBreaker(ep endpoint.Endpoint, breakerName string) endpoint.Endpoint {
+
+	breaker := gobreaker.NewCircuitBreaker(gobreaker.Settings{
+		Name: breakerName,
+	})
+
+	return circuitbreaker.Gobreaker(breaker)(ep)
 }
