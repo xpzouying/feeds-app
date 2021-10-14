@@ -11,7 +11,7 @@ type loggingMiddleware struct {
 	next   Service
 }
 
-func LoggingMiddleware(logger log.Logger) Middleware {
+func WithLoggingMiddleware(logger log.Logger) Middleware {
 
 	return func(next Service) Service {
 		return &loggingMiddleware{logger, next}

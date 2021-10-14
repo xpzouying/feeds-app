@@ -4,25 +4,15 @@ import (
 	"flag"
 	"net/http"
 	"os"
-	"time"
 
-	"github.com/go-kit/kit/circuitbreaker"
-	"github.com/go-kit/kit/endpoint"
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
-	"github.com/go-kit/kit/ratelimit"
-	"github.com/go-kit/kit/tracing/opentracing"
 	"github.com/go-kit/log"
-	stdopentracing "github.com/opentracing/opentracing-go"
-	zipkinot "github.com/openzipkin-contrib/zipkin-go-opentracing"
-	stdzipkin "github.com/openzipkin/zipkin-go"
-	httpreporter "github.com/openzipkin/zipkin-go/reporter/http"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sony/gobreaker"
-	"golang.org/x/time/rate"
 
 	"github.com/xpzouying/feeds-app/server/feed"
 	"github.com/xpzouying/feeds-app/server/feeding"
+	"github.com/xpzouying/feeds-app/server/middleware"
 	"github.com/xpzouying/feeds-app/server/repository"
 	"github.com/xpzouying/feeds-app/server/user"
 )
@@ -47,26 +37,22 @@ func main() {
 	var (
 		feedRepo = repository.NewFeedRepository()
 		userRepo = repository.NewUserRepository()
-	)
 
-	var (
-		tracer = newOpenTracer(zipkinAddr)
-	)
-
-	var (
 		fs feeding.Service = makeFeedingService(logger, feedRepo, userRepo)
+
+		tracer = middleware.NewOpenTracer("feed-server", zipkinAddr)
 	)
 
 	var feedingEndpoints feeding.EndpointSet
 	{
 		listFeedEndpoint := feeding.MakeListFeedsEndpoint(fs)
-		listFeedEndpoint = ratelimit.NewErroringLimiter(rate.NewLimiter(rate.Every(time.Second), 1))(listFeedEndpoint)
-		listFeedEndpoint = opentracing.TraceServer(tracer, "FeedingService.ListFeeds")(listFeedEndpoint)
+		listFeedEndpoint = middleware.WithRateLimiter(listFeedEndpoint)
+		listFeedEndpoint = middleware.WithOpenTracer(listFeedEndpoint, tracer, "FeedingService.ListFeeds")
 		feedingEndpoints.ListFeeds = listFeedEndpoint
 
 		postFeedEndpoint := feeding.MakePostFeedEndpoint(fs)
-		postFeedEndpoint = wrapGoBreaker(postFeedEndpoint, "FeedingService.PostFeed.Breader")
-		postFeedEndpoint = opentracing.TraceServer(tracer, "FeedingService.PostFeed")(postFeedEndpoint)
+		postFeedEndpoint = middleware.WithGoBreaker(postFeedEndpoint, "FeedingService.PostFeed.Breader")
+		postFeedEndpoint = middleware.WithOpenTracer(postFeedEndpoint, tracer, "FeedingService.PostFeed")
 		feedingEndpoints.PostFeed = postFeedEndpoint
 	}
 
@@ -79,34 +65,13 @@ func main() {
 	logger.Log("finish", http.ListenAndServe(httpAddr, mux))
 }
 
-func newOpenTracer(zipkinAddr string) (openTracer stdopentracing.Tracer) {
-	openTracer = stdopentracing.GlobalTracer()
-	if len(zipkinAddr) == 0 {
-		return
-	}
-
-	zipkinReporter := httpreporter.NewReporter(zipkinAddr)
-	zipkinEndpoint, err := stdzipkin.NewEndpoint("feed-server", ":0")
-	if err != nil {
-		return
-	}
-
-	zipkinTracer, err := stdzipkin.NewTracer(zipkinReporter, stdzipkin.WithLocalEndpoint(zipkinEndpoint))
-	if err != nil {
-		return
-	}
-
-	openTracer = zipkinot.Wrap(zipkinTracer)
-	return
-}
-
 func makeFeedingService(logger log.Logger, feedRepo feed.Repository, userRepo user.Repository) (fs feeding.Service) {
 	labelNames := []string{"method"}
 
 	fs = feeding.NewService(feedRepo, userRepo)
 
-	fs = feeding.LoggingMiddleware(log.With(logger, "component", "feeding"))(fs)
-	fs = feeding.InstrumentMiddleware(
+	fs = feeding.WithLoggingMiddleware(log.With(logger, "component", "feeding"))(fs)
+	fs = feeding.WithInstrumentMiddleware(
 		kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
 			Namespace: "api",
 			Subsystem: "feeding_service",
@@ -122,13 +87,4 @@ func makeFeedingService(logger log.Logger, feedRepo feed.Repository, userRepo us
 	)(fs)
 
 	return
-}
-
-func wrapGoBreaker(ep endpoint.Endpoint, breakerName string) endpoint.Endpoint {
-
-	breaker := gobreaker.NewCircuitBreaker(gobreaker.Settings{
-		Name: breakerName,
-	})
-
-	return circuitbreaker.Gobreaker(breaker)(ep)
 }

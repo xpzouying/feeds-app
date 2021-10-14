@@ -12,7 +12,7 @@ type instrumentingMiddleware struct {
 	next       Service
 }
 
-func InstrumentMiddleware(counter metrics.Counter, latency metrics.Histogram) Middleware {
+func WithInstrumentMiddleware(counter metrics.Counter, latency metrics.Histogram) Middleware {
 	return func(next Service) Service {
 		return &instrumentingMiddleware{counter, latency, next}
 	}
