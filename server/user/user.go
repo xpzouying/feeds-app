@@ -2,9 +2,9 @@ package user
 
 // User is a user model.
 type User struct {
-	Uid    int
-	Name   string
-	Avatar string
+	Uid    int    `json:"uid" db:"uid"`
+	Name   string `json:"name" db:"name"`
+	Avatar string `json:"avatar" db:"avatar"`
 }
 
 type Repository interface {

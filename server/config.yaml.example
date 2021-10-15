@@ -1,0 +1,14 @@
+server:
+  http_addr: ":8080"
+
+database:
+  use_mem: true
+  user: "zouying"
+  password: "123456"
+  host: 127.0.0.1
+  port: 3306
+
+tracer:
+  type: "zipkin"
+  address: "http://localhost:9411/api/v2/spans"
+

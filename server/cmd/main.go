@@ -2,29 +2,23 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 
-	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
 	"github.com/go-kit/log"
-	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/xpzouying/feeds-app/server/feed"
 	"github.com/xpzouying/feeds-app/server/feeding"
 	"github.com/xpzouying/feeds-app/server/middleware"
-	"github.com/xpzouying/feeds-app/server/repository"
-	"github.com/xpzouying/feeds-app/server/user"
 )
 
 func main() {
 	var (
-		httpAddr   string
-		zipkinAddr string
+		cfgPath string
 	)
 	{
-		flag.StringVar(&httpAddr, "http.addr", ":8080", "http address for server")
-		flag.StringVar(&zipkinAddr, "zipkin.addr", "", "address of zipkin, like http://localhost:9411/api/v2/spans")
+		flag.StringVar(&cfgPath, "conf", "config.yaml", "config file for server")
 	}
 	flag.Parse()
 
@@ -34,13 +28,24 @@ func main() {
 		logger = log.With(logger, "ts", log.DefaultTimestamp)
 	}
 
+	config, err := newConfigFromFile(cfgPath)
+	if err != nil {
+		logger.Log("error", err.Error())
+		os.Exit(1)
+	}
+
+	fmt.Printf("config: %+v\n", config)
+
+	repoSet, err := newRepositorySet(config.DB)
+	if err != nil {
+		logger.Log("error", err.Error())
+		os.Exit(1)
+	}
+
 	var (
-		feedRepo = repository.NewFeedRepository()
-		userRepo = repository.NewUserRepository()
+		fs feeding.Service = makeFeedingService(logger, repoSet.feedRepo, repoSet.userRepo)
 
-		fs feeding.Service = makeFeedingService(logger, feedRepo, userRepo)
-
-		tracer = middleware.NewOpenTracer("feed-server", zipkinAddr)
+		tracer = middleware.NewOpenTracer("feed-server", config.Tracer.Address)
 	)
 
 	var feedingEndpoints feeding.EndpointSet
@@ -61,30 +66,6 @@ func main() {
 
 	mux.Handle("/metrics", promhttp.Handler())
 
-	logger.Log("http.addr", httpAddr)
-	logger.Log("finish", http.ListenAndServe(httpAddr, mux))
-}
-
-func makeFeedingService(logger log.Logger, feedRepo feed.Repository, userRepo user.Repository) (fs feeding.Service) {
-	labelNames := []string{"method"}
-
-	fs = feeding.NewService(feedRepo, userRepo)
-
-	fs = feeding.WithLoggingMiddleware(log.With(logger, "component", "feeding"))(fs)
-	fs = feeding.WithInstrumentMiddleware(
-		kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
-			Namespace: "api",
-			Subsystem: "feeding_service",
-			Name:      "request_count",
-			Help:      "Count of request",
-		}, labelNames),
-		kitprometheus.NewHistogramFrom(stdprometheus.HistogramOpts{
-			Namespace: "api",
-			Subsystem: "feeding_service",
-			Name:      "request_latency",
-			Help:      "Latency of request",
-		}, labelNames),
-	)(fs)
-
-	return
+	logger.Log("http.addr", config.Server.HTTPAddr)
+	logger.Log("finish", http.ListenAndServe(config.Server.HTTPAddr, mux))
 }
