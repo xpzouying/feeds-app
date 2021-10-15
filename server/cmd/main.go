@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 
@@ -33,8 +32,6 @@ func main() {
 		logger.Log("error", err.Error())
 		os.Exit(1)
 	}
-
-	fmt.Printf("config: %+v\n", config)
 
 	repoSet, err := newRepositorySet(config.DB)
 	if err != nil {
